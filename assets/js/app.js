@@ -1,6 +1,5 @@
 /**
- * Marketing Content Hub - Client-side Application Logic
- * Supports Multi-Platform, Scheduling Views, Campaign Buckets, Full Post View/Edit, and Enhanced Authoring
+ * Marketing Content Hub - Studio Copywriting & Formatter Engine
  */
 
 let state = {
@@ -18,21 +17,92 @@ let state = {
     stagedFiles: []
 };
 
-// Platform specific metadata & limits
+// Platform metadata, word limits, and recommended guidelines
 const PLATFORMS = {
-    facebook: { name: 'Facebook', limit: 63206, icon: 'facebook', color: 'text-blue-500', maxTags: 10 },
-    instagram: { name: 'Instagram', limit: 2200, icon: 'instagram', color: 'text-pink-400', maxTags: 30 },
-    tiktok: { name: 'TikTok', limit: 2200, icon: 'video', color: 'text-teal-400', maxTags: 10 },
-    linkedin: { name: 'LinkedIn', limit: 3000, icon: 'linkedin', color: 'text-blue-400', maxTags: 10 },
-    twitter: { name: 'X (Twitter)', limit: 280, icon: 'twitter', color: 'text-sky-400', maxTags: 5 },
-    threads: { name: 'Threads', limit: 500, icon: 'message-circle', color: 'text-slate-300', maxTags: 5 }
+    facebook: { 
+        name: 'Facebook', 
+        limit: 63206, 
+        icon: 'facebook', 
+        color: 'text-blue-500', 
+        maxTags: 10, 
+        cta: '👉 Learn more & shop today:',
+        hook: '🔥 Exciting news! We just dropped something huge:'
+    },
+    instagram: { 
+        name: 'Instagram', 
+        limit: 2200, 
+        icon: 'instagram', 
+        color: 'text-pink-400', 
+        maxTags: 30, 
+        cta: '👉 Tap the link in bio to shop the drop!',
+        hook: '✨ Stop scrolling! You won\'t want to miss this:'
+    },
+    tiktok: { 
+        name: 'TikTok', 
+        limit: 2200, 
+        icon: 'video', 
+        color: 'text-teal-400', 
+        maxTags: 10, 
+        cta: '👇 Drop your favorite piece in the comments!',
+        hook: '👀 Wait until you see this new drop 🔥'
+    },
+    linkedin: { 
+        name: 'LinkedIn', 
+        limit: 3000, 
+        icon: 'linkedin', 
+        color: 'text-blue-400', 
+        maxTags: 10, 
+        cta: '🔗 Read the complete report and strategy here:',
+        hook: '💡 Key insight from our latest marketing study:'
+    },
+    twitter: { 
+        name: 'X (Twitter)', 
+        limit: 280, 
+        icon: 'twitter', 
+        color: 'text-sky-400', 
+        maxTags: 5, 
+        cta: '🔗 Check it out:',
+        hook: '🚀 Big announcement today:'
+    },
+    threads: { 
+        name: 'Threads', 
+        limit: 500, 
+        icon: 'message-circle', 
+        color: 'text-slate-300', 
+        maxTags: 5, 
+        cta: '💬 What do you think? Let\'s discuss below.',
+        hook: '🧵 Quick question for modern creators:'
+    }
+};
+
+// Unicode Character Maps for Stylized Social Typography (Bold, Italic, Monospace)
+const UNICODE_FONTS = {
+    bold: {
+        'A':'𝗔','B':'𝗕','C':'𝗖','D':'𝗗','E':'𝗘','F':'𝗙','G':'𝗚','H':'𝗛','I':'𝗜','J':'𝗝','K':'𝗞','L':'𝗟','M':'𝗠',
+        'N':'𝗡','O':'𝗢','P':'𝗣','Q':'𝗤','R':'𝗥','S':'𝗦','T':'𝗧','U':'𝗨','V':'𝗩','W':'𝗪','X':'𝗫','Y':'𝗬','Z':'𝗭',
+        'a':'𝗮','b':'𝗯','c':'𝗰','d':'𝗱','e':'𝗲','f':'𝗳','g':'𝗴','h':'𝗵','i':'𝗶','j':'𝗷','k':'𝗸','l':'𝗹','m':'𝗺',
+        'n':'𝗻','o':'𝗼','p':'𝗽','q':'𝗾','r':'𝗿','s':'𝘀','t':'𝘁','u':'𝘂','v':'𝘃','w':'𝘄','x':'𝘅','y':'𝘆','z':'𝘇',
+        '0':'𝟬','1':'𝟭','2':'𝟮','3':'𝟯','4':'𝟰','5':'𝟱','6':'𝟲','7':'𝟳','8':'𝟴','9':'𝟵'
+    },
+    italic: {
+        'A':'𝘈','B':'𝘉','C':'𝘊','D':'𝘋','E':'𝘌','F':'𝘍','G':'𝘎','H':'𝘏','I':'𝘐','J':'𝘑','K':'𝘒','L':'𝘓','M':'𝘔',
+        'N':'𝘕','O':'𝘖','P':'𝘗','Q':'𝘘','R':'𝘙','S':'𝘚','T':'𝘛','U':'𝘜','V':'𝘝','W':'𝘞','X':'𝘟','Y':'𝘠','Z':'𝘡',
+        'a':'𝘢','b':'𝘣','c':'𝘤','d':'𝘥','e':'𝘦','f':'𝘧','g':'𝘨','h':'𝘩','i':'𝘪','j':'𝘫','k':'𝘬','l':'𝘭','m':'𝘮',
+        'n':'𝘯','o':'𝘰','p':'𝘱','q':'𝘲','r':'𝘳','s':'𝘴','t':'𝘵','u':'𝘶','v':'𝘷','w':'𝘸','x':'𝘹','y':'𝘺','z':'𝘻'
+    },
+    monospace: {
+        'A':'𝙰','B':'𝙱','C':'𝙲','D':'𝙳','E':'𝙴','F':'𝙵','G':'𝙶','H':'𝙷','I':'𝙸','J':'𝙹','K':'𝙺','L':'𝙻','M':'𝙼',
+        'N':'𝙽','O':'𝙾','P':'𝙿','Q':'𝚀','R':'𝚁','S':'𝚂','T':'𝚃','U':'𝚄','V':'𝚅','W':'𝚆','X':'𝚇','Y':'𝚈','Z':'𝚉',
+        'a':'𝚊','b':'𝚋','c':'𝚌','d':'𝚍','e':'𝚎','f':'𝚏','g':'𝚐','h':'𝚑','i':'𝚒','j':'𝚓','k':'𝚔','l':'𝚕','m':'𝚖',
+        'n':'𝚗','o':'𝚘','p':'𝚙','q':'𝚚','r':'𝚛','s':'𝚜','t':'𝚝','u':'𝚞','v':'𝚟','w':'𝚠','x':'𝚡','y':'𝚢','z':'𝚣',
+        '0':'𝟶','1':'𝟷','2':'𝟸','3':'𝟹','4':'𝟺','5':'𝟻','6':'𝟼','7':'𝟽','8':'𝟾','9':'𝟿'
+    }
 };
 
 document.addEventListener('DOMContentLoaded', () => {
     renderPosts();
     updateBatchBtn();
     
-    // Live update hashtag count hint on post form
     const hashtagInput = document.getElementById('post-hashtags');
     if (hashtagInput) {
         hashtagInput.addEventListener('input', updateHashtagHint);
@@ -554,7 +624,6 @@ function openCreateModal() {
     document.getElementById('staged-media-count').textContent = '0';
     state.stagedFiles = [];
 
-    // Reset platform char counters
     Object.keys(PLATFORMS).forEach(p => updateCharCounter(p));
     updateHashtagHint();
 
@@ -585,7 +654,6 @@ function openEditPostModal(postId) {
 
     document.getElementById('post-hashtags').value = (post.hashtags || []).join(' ');
 
-    // Show existing media assets in staged grid
     if (post.media && post.media.length > 0) {
         const grid = document.getElementById('staged-media-grid');
         grid.innerHTML = '';
@@ -617,8 +685,11 @@ function switchModalChannel(channel) {
         tab.classList.remove('active-modal-tab', 'text-white', 'bg-slate-800');
         tab.classList.add('text-slate-400');
     });
-    event.currentTarget.classList.add('active-modal-tab', 'text-white', 'bg-slate-800');
-    event.currentTarget.classList.remove('text-slate-400');
+    const activeTab = document.querySelector(`.modal-tab[data-channel="${channel}"]`);
+    if (activeTab) {
+        activeTab.classList.add('active-modal-tab', 'text-white', 'bg-slate-800');
+        activeTab.classList.remove('text-slate-400');
+    }
 
     document.querySelectorAll('.modal-channel-pane').forEach(pane => pane.classList.add('hidden'));
     const activePane = document.getElementById(`channel-input-${channel}`);
@@ -649,43 +720,178 @@ function updateHashtagHint() {
     }
 }
 
-// Formatting Tool Helpers
+// -------------------------------------------------------------
+// ADVANCED MARKETING FORMATTING & CONTENT TOOLS
+// -------------------------------------------------------------
+
+function getActiveModalTextarea() {
+    return document.getElementById(`channel-cap-${state.modalChannel}`) || document.getElementById('post-primary-caption');
+}
+
 function syncMasterToChannels() {
     const master = document.getElementById('post-primary-caption').value;
     if (!master) return showToast('Please write a master caption first', 'error');
 
     ['facebook', 'instagram', 'tiktok', 'linkedin', 'twitter', 'threads'].forEach(p => {
         const input = document.getElementById(`channel-cap-${p}`);
-        if (input && !input.value) {
+        if (input) {
             input.value = master;
             updateCharCounter(p);
         }
     });
-    showToast('Master copy synced to channels!');
+    showToast('Master copy synced to all channels!');
 }
 
 function insertEmoji(emoji) {
-    const activeTextarea = document.getElementById(`channel-cap-${state.modalChannel}`);
-    if (activeTextarea) {
-        activeTextarea.value += emoji;
-        updateCharCounter(state.modalChannel);
+    const textarea = getActiveModalTextarea();
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const val = textarea.value;
+
+    textarea.value = val.substring(0, start) + emoji + val.substring(end);
+    textarea.selectionStart = textarea.selectionEnd = start + emoji.length;
+    textarea.focus();
+    updateCharCounter(state.modalChannel);
+}
+
+function formatTransformSelection(type) {
+    const textarea = getActiveModalTextarea();
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const val = textarea.value;
+    let selected = val.substring(start, end);
+
+    if (!selected) {
+        selected = val;
+        if (!selected) return showToast('Please select or type text to format', 'error');
     }
+
+    let transformed = selected;
+
+    if (type === 'bold') {
+        transformed = selected.split('').map(c => UNICODE_FONTS.bold[c] || c).join('');
+    } else if (type === 'italic') {
+        transformed = selected.split('').map(c => UNICODE_FONTS.italic[c] || c).join('');
+    } else if (type === 'monospace') {
+        transformed = selected.split('').map(c => UNICODE_FONTS.monospace[c] || c).join('');
+    } else if (type === 'titlecase') {
+        transformed = selected.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+    } else if (type === 'uppercase') {
+        transformed = selected.toUpperCase();
+    } else if (type === 'bullet') {
+        transformed = selected.split('\n').map(line => line.trim() ? (line.startsWith('• ') ? line : '• ' + line) : line).join('\n');
+    } else if (type === 'numbered') {
+        let count = 1;
+        transformed = selected.split('\n').map(line => {
+            if (!line.trim()) return line;
+            const stripped = line.replace(/^\d+\.\s*/, '');
+            const res = `${count}. ${stripped}`;
+            count++;
+            return res;
+        }).join('\n');
+    } else if (type === 'check') {
+        transformed = selected.split('\n').map(line => line.trim() ? (line.startsWith('✓ ') ? line : '✓ ' + line) : line).join('\n');
+    }
+
+    if (textarea.selectionStart !== textarea.selectionEnd) {
+        textarea.value = val.substring(0, start) + transformed + val.substring(end);
+        textarea.selectionStart = start;
+        textarea.selectionEnd = start + transformed.length;
+    } else {
+        textarea.value = transformed;
+    }
+
+    textarea.focus();
+    updateCharCounter(state.modalChannel);
+    showToast(`Formatted text as ${type}!`);
+}
+
+function insertHeadlineHook() {
+    const textarea = getActiveModalTextarea();
+    if (!textarea) return;
+
+    const channel = state.modalChannel;
+    const hook = (PLATFORMS[channel] && PLATFORMS[channel].hook) || '🔥 Big Announcement:';
+    
+    if (textarea.value.trim() === '') {
+        textarea.value = `${hook}\n\n`;
+    } else {
+        textarea.value = `${hook}\n\n` + textarea.value;
+    }
+    textarea.focus();
+    updateCharCounter(channel);
+    showToast(`Inserted viral hook for ${capitalize(channel)}!`);
+}
+
+function insertKeyTakeaways() {
+    const textarea = getActiveModalTextarea();
+    if (!textarea) return;
+
+    const takeawayBlock = `\n\n📌 3 Key Takeaways:\n1. Strategic Insight 1\n2. Practical Implementation 2\n3. Business Impact 3\n`;
+    textarea.value += takeawayBlock;
+    textarea.focus();
+    updateCharCounter(state.modalChannel);
+    showToast('Structured 3-point takeaways inserted!');
 }
 
 function insertLineBreakSpacers() {
-    const activeTextarea = document.getElementById(`channel-cap-${state.modalChannel}`);
-    if (activeTextarea) {
-        activeTextarea.value += '\n.\n';
-        updateCharCounter(state.modalChannel);
-    }
+    const textarea = getActiveModalTextarea();
+    if (!textarea) return;
+
+    const val = textarea.value;
+    const lines = val.split('\n');
+    const spaced = lines.map(line => line.trim() === '' ? '.\n' : line).join('\n');
+    textarea.value = spaced.includes('.\n') ? spaced : val + '\n.\n';
+    textarea.focus();
+    updateCharCounter(state.modalChannel);
+    showToast('Clean line spacers inserted for Instagram/Facebook!');
+}
+
+function stripExtraWhitespace() {
+    const textarea = getActiveModalTextarea();
+    if (!textarea) return;
+
+    const val = textarea.value;
+    // Replace 3+ consecutive newlines with 2, and trim trailing space on lines
+    const cleaned = val
+        .split('\n')
+        .map(l => l.trimEnd())
+        .join('\n')
+        .replace(/\n{3,}/g, '\n\n')
+        .trim();
+    
+    textarea.value = cleaned;
+    textarea.focus();
+    updateCharCounter(state.modalChannel);
+    showToast('Cleaned excess whitespace & blank lines!');
 }
 
 function insertUtmTemplate() {
-    const activeTextarea = document.getElementById(`channel-cap-${state.modalChannel}`);
-    if (activeTextarea) {
-        activeTextarea.value += `\nhttps://brand.com/link?utm_source=${state.modalChannel}&utm_medium=social&utm_campaign=content_hub`;
-        updateCharCounter(state.modalChannel);
-    }
+    const textarea = getActiveModalTextarea();
+    if (!textarea) return;
+
+    const channel = state.modalChannel;
+    const utmLink = `\n\n🔗 https://brand.com/launch?utm_source=${channel}&utm_medium=social&utm_campaign=content_hub`;
+    textarea.value += utmLink;
+    textarea.focus();
+    updateCharCounter(channel);
+    showToast(`Added ${capitalize(channel)} UTM tracking URL!`);
+}
+
+function insertCallToAction() {
+    const textarea = getActiveModalTextarea();
+    if (!textarea) return;
+
+    const channel = state.modalChannel;
+    const cta = (PLATFORMS[channel] && PLATFORMS[channel].cta) || '👉 Link in bio to learn more!';
+    textarea.value += `\n\n${cta}`;
+    textarea.focus();
+    updateCharCounter(channel);
+    showToast(`Inserted ${capitalize(channel)} CTA!`);
 }
 
 function autoFormatHashtags() {
@@ -696,7 +902,43 @@ function autoFormatHashtags() {
     const formatted = matches.map(m => m.startsWith('#') ? m : '#' + m);
     input.value = formatted.join(' ');
     updateHashtagHint();
-    showToast('Hashtags auto-formatted!');
+    showToast('Hashtags cleaned & prefixed with #');
+}
+
+function camelCaseHashtags() {
+    const input = document.getElementById('post-hashtags');
+    if (!input) return;
+    const raw = input.value;
+    const matches = raw.match(/#?([\p{L}\p{N}_]+)/gu) || [];
+    const camelCased = matches.map(m => {
+        const clean = m.replace(/^#/, '');
+        const capitalized = clean.charAt(0).toUpperCase() + clean.slice(1);
+        return '#' + capitalized;
+    });
+    input.value = camelCased.join(' ');
+    updateHashtagHint();
+    showToast('Hashtags converted to #CamelCase!');
+}
+
+function deduplicateHashtags() {
+    const input = document.getElementById('post-hashtags');
+    if (!input) return;
+    const raw = input.value;
+    const matches = raw.match(/#?([\p{L}\p{N}_]+)/gu) || [];
+    const seen = new Set();
+    const unique = [];
+
+    matches.forEach(m => {
+        const lower = m.toLowerCase();
+        if (!seen.has(lower)) {
+            seen.add(lower);
+            unique.push(m.startsWith('#') ? m : '#' + m);
+        }
+    });
+
+    input.value = unique.join(' ');
+    updateHashtagHint();
+    showToast(`Deduplicated: ${unique.length} unique tags retained!`);
 }
 
 function handleFileSelect(input) {
@@ -816,7 +1058,6 @@ async function handleCampaignSubmit(e) {
             showToast('Campaign created successfully!');
             state.campaigns.unshift(json.data);
             
-            // Append to sidebar & create post dropdown
             const filterList = document.getElementById('campaign-filter-list');
             const newBtn = document.createElement('button');
             newBtn.className = 'camp-filter-btn w-full flex items-center justify-between px-3 py-1.5 rounded-xl text-xs font-medium text-slate-400 hover:text-white hover:bg-slate-800/50 transition-all';
