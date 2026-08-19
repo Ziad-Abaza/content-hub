@@ -21,6 +21,7 @@ class PostController {
         $filters = [
             'campaign_id' => !empty($_GET['campaign_id']) ? (int)$_GET['campaign_id'] : null,
             'status' => !empty($_GET['status']) ? trim($_GET['status']) : null,
+            'schedule_view' => !empty($_GET['schedule_view']) ? trim($_GET['schedule_view']) : null,
             'search' => !empty($_GET['search']) ? trim($_GET['search']) : null
         ];
 
@@ -44,7 +45,6 @@ class PostController {
     public function store(): void {
         header('Content-Type: application/json');
 
-        // Can receive JSON or multipart/form-data with files
         $postData = $_POST;
         if (empty($postData) && empty($_FILES)) {
             $raw = file_get_contents('php://input');
@@ -57,21 +57,17 @@ class PostController {
             exit;
         }
 
-        // Process channel captions
         $channelCaptions = $postData['channel_captions'] ?? [];
         if (is_string($channelCaptions)) {
             $channelCaptions = json_decode($channelCaptions, true) ?: [];
         }
 
-        // Process hashtags
         $hashtags = $postData['hashtags'] ?? [];
         if (is_string($hashtags)) {
-            // Check if JSON array string or space/comma separated tags
             $decoded = json_decode($hashtags, true);
             if (is_array($decoded)) {
                 $hashtags = $decoded;
             } else {
-                // Split by spaces or commas
                 preg_match_all('/#?([\p{L}\p{N}_]+)/u', $hashtags, $matches);
                 $hashtags = array_map(function($t) { return str_starts_with($t, '#') ? $t : '#' . $t; }, $matches[0] ?? []);
             }
@@ -89,7 +85,7 @@ class PostController {
 
         $postId = $this->postModel->create($newPost);
 
-        // Process any uploaded media files attached directly to this post
+        // Process uploaded media files
         if (!empty($_FILES['media_files'])) {
             $files = $_FILES['media_files'];
             if (is_array($files['name'])) {

@@ -26,6 +26,8 @@ class Database {
                 if ($isNew || filesize($dbPath) === 0) {
                     self::initSchema(self::$instance);
                     self::seedInitialData(self::$instance);
+                } else {
+                    self::initSchema(self::$instance);
                 }
             } catch (PDOException $e) {
                 die("Database Connection Error: " . $e->getMessage());
@@ -42,6 +44,7 @@ class Database {
                 description TEXT,
                 status TEXT DEFAULT 'active',
                 tags TEXT DEFAULT '[]',
+                color TEXT DEFAULT '#6366f1',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             );
@@ -80,12 +83,12 @@ class Database {
 
             CREATE INDEX IF NOT EXISTS idx_posts_campaign ON content_posts(campaign_id);
             CREATE INDEX IF NOT EXISTS idx_posts_status ON content_posts(status);
+            CREATE INDEX IF NOT EXISTS idx_posts_scheduled ON content_posts(scheduled_for);
             CREATE INDEX IF NOT EXISTS idx_media_post ON media_assets(post_id);
         ");
     }
 
     public static function seedInitialData(PDO $db): void {
-        // Ensure uploads directory exists
         $uploadDir = __DIR__ . '/../uploads';
         if (!is_dir($uploadDir)) {
             mkdir($uploadDir, 0777, true);
@@ -97,26 +100,29 @@ class Database {
                 'title' => 'Summer Brand Refresh 2026',
                 'description' => 'Global summer campaign featuring new aesthetic product drops, lifestyle visuals, and influencer spotlights.',
                 'status' => 'active',
-                'tags' => json_encode(['Summer2026', 'Lifestyle', 'BrandRefresh'])
+                'tags' => json_encode(['Summer2026', 'Lifestyle', 'BrandRefresh']),
+                'color' => '#ec4899'
             ],
             [
                 'title' => 'Product V2 Feature Launch',
                 'description' => 'Technical and marketing rollouts for the major 2.0 software update and AI capabilities.',
                 'status' => 'active',
-                'tags' => json_encode(['ProductLaunch', 'Tech', 'SaaS', 'AI'])
+                'tags' => json_encode(['ProductLaunch', 'Tech', 'SaaS', 'AI']),
+                'color' => '#6366f1'
             ],
             [
                 'title' => 'Customer Success Stories',
-                'description' => 'Case studies, user testimonials, and enterprise partner highlights for LinkedIn and social proof.',
+                'description' => 'Case studies, user testimonials, and enterprise partner highlights for LinkedIn, Facebook and social proof.',
                 'status' => 'active',
-                'tags' => json_encode(['B2B', 'Testimonials', 'CaseStudy'])
+                'tags' => json_encode(['B2B', 'Testimonials', 'CaseStudy']),
+                'color' => '#10b981'
             ]
         ];
 
-        $stmtCamp = $db->prepare("INSERT INTO campaigns (title, description, status, tags) VALUES (?, ?, ?, ?)");
+        $stmtCamp = $db->prepare("INSERT INTO campaigns (title, description, status, tags, color) VALUES (?, ?, ?, ?, ?)");
         $campIds = [];
         foreach ($campaigns as $camp) {
-            $stmtCamp->execute([$camp['title'], $camp['description'], $camp['status'], $camp['tags']]);
+            $stmtCamp->execute([$camp['title'], $camp['description'], $camp['status'], $camp['tags'], $camp['color']]);
             $campIds[] = (int)$db->lastInsertId();
         }
 
@@ -172,7 +178,6 @@ class Database {
                 $fg = imagecolorallocate($img, $imgData['text_color'][0], $imgData['text_color'][1], $imgData['text_color'][2]);
                 imagefill($img, 0, 0, $bg);
                 
-                // Add decorative elements
                 $white = imagecolorallocate($img, 255, 255, 255);
                 imagerectangle($img, 40, 40, $imgData['width'] - 40, $imgData['height'] - 40, $white);
                 imagestring($img, 5, 80, 80, $imgData['title'], $fg);
@@ -184,20 +189,27 @@ class Database {
             }
         }
 
-        // Insert Content Posts with Multi-Channel Variations
+        $today = date('Y-m-d H:i:s');
+        $tomorrow = date('Y-m-d H:i:s', strtotime('+1 day'));
+        $nextWeek = date('Y-m-d H:i:s', strtotime('+4 days'));
+
+        // Insert Content Posts with Facebook, Instagram, TikTok, LinkedIn, Twitter, Threads
         $posts = [
             [
                 'campaign_id' => $campIds[0] ?? 1,
                 'title' => '☀️ Summer Glow Collection Reveal',
                 'primary_caption' => "Summer has officially arrived! ☀️ Dive into our all-new vibrant collection crafted for sunshine days, effortless elegance, and modern creators. Available worldwide starting today.",
                 'channel_captions' => json_encode([
+                    'facebook' => "Summer is here! ☀️ Explore our brand-new summer drop featuring sustainable fabrics and breathable designs for all your warm-weather adventures.\n\nShop the collection: https://brand.com/summer-2026",
                     'instagram' => "Summer has arrived! ☀️ Dive into our new vibrant collection crafted for sunshine days and effortless elegance. Tap the link in bio to shop the drop before it sells out! ✨\n\nDrop your favorite piece in the comments 👇",
                     'tiktok' => "Wait till you see the new summer drop 🔥 Pack your bags and get ready for sunshine season! Which one are you wearing first? #linkinbio to cop now!",
                     'linkedin' => "We are excited to announce the launch of our Summer 2026 Campaign. This release represents months of dedicated design, customer feedback integration, and sustainable sourcing. Discover how our brand continues to innovate in retail and lifestyle.",
-                    'twitter' => "It's finally here ☀️ Our Summer 2026 Collection is live now! Fresh styles, sustainable fabrics, and vibrant colors. Grab yours before they're gone: http://hub.brand.com/summer"
+                    'twitter' => "It's finally here ☀️ Our Summer 2026 Collection is live now! Fresh styles, sustainable fabrics, and vibrant colors. Grab yours before they're gone: http://hub.brand.com/summer",
+                    'threads' => "Our Summer 2026 Collection is live! ☀️ Sustainable, breathable, and designed for every day. What colorway are you picking up?"
                 ]),
                 'hashtags' => json_encode(['#Summer2026', '#StyleDrop', '#SummerVibes', '#NewArrivals', '#SustainableFashion', '#TrendingNow']),
                 'status' => 'ready',
+                'scheduled_for' => $today,
                 'media' => [
                     [
                         'file_name' => 'summer-hero-square.png',
@@ -228,13 +240,16 @@ class Database {
                 'title' => '🚀 Introducing Content Engine 2.0: AI-Powered Workflows',
                 'primary_caption' => "Supercharge your marketing velocity. We just rolled out Content Engine 2.0 featuring real-time collaborative editing, instant asset resizing, and one-click channel copy distribution.",
                 'channel_captions' => json_encode([
+                    'facebook' => "Content Engine 2.0 is live! 🚀 Accelerate your marketing production with automated multi-channel formatting, asset resizing, and team-wide campaign buckets.\n\nRead our launch announcement: https://brand.com/v2-announcement",
                     'instagram' => "Creating content just got 10x faster ⚡ Meet Content Engine 2.0! Instant resizing, smart caption formatting, and one-click asset downloads. Check out the walkthrough in our bio! 🚀",
                     'tiktok' => "If you work in marketing or content creation, this tool is going to save you 5 hours a week 🤯 Here is how Content Engine 2.0 works!",
                     'linkedin' => "Marketing velocity is no longer optional—it's a competitive advantage. Today we are launching Content Engine 2.0 to empower distributed teams with centralized asset control, compliant branding, and lightning-fast social distribution.",
-                    'twitter' => "Big launch day! 🚀 Content Engine 2.0 is now live for all teams. Say goodbye to manual resizing and copy-pasting hashtags across 5 apps. Try it today: http://hub.brand.com/v2"
+                    'twitter' => "Big launch day! 🚀 Content Engine 2.0 is now live for all teams. Say goodbye to manual resizing and copy-pasting hashtags across 5 apps. Try it today: http://hub.brand.com/v2",
+                    'threads' => "Content Engine 2.0 is here! 🚀 Multi-channel copy distribution, instant batch asset zip packaging, and real-time character limit enforcement."
                 ]),
                 'hashtags' => json_encode(['#ProductLaunch', '#MarketingTech', '#MarTech', '#Productivity', '#ContentStrategy', '#B2B']),
                 'status' => 'ready',
+                'scheduled_for' => $tomorrow,
                 'media' => [
                     [
                         'file_name' => 'product-v2-landscape.png',
@@ -254,13 +269,16 @@ class Database {
                 'title' => '💼 Enterprise Case Study: Scaling to 10M Impressions',
                 'primary_caption' => "Discover how GlobalFin scaled their social presence by 400% in 90 days using structured asset hubs and multi-platform workflows.",
                 'channel_captions' => json_encode([
+                    'facebook' => "How did GlobalFin reach 10 Million organic impressions in just 3 months? We dive deep into their team workflow, asset repository structure, and publishing cadences in our new case study.\n\nDownload the case study: https://brand.com/globalfin-case-study",
                     'instagram' => "From 0 to 10M impressions in 90 days 📈 Swipe through to see the exact 3-step strategy GlobalFin used to dominate social media this quarter. Link in bio for the full breakdown! 💡",
                     'tiktok' => "How this company got 10M impressions without spending extra on ads 📈 Steal their 3-step strategy now!",
                     'linkedin' => "Consistency and asset governance are the secret engines of enterprise social growth. In our latest case study, we break down how GlobalFin restructured their content distribution to achieve a 400% YoY increase in engagement. Read the full report.",
-                    'twitter' => "How did @GlobalFin scale to 10M impressions in 90 days? We broke down their complete playbook in our new case study 📊 Read here: http://hub.brand.com/case-study"
+                    'twitter' => "How did @GlobalFin scale to 10M impressions in 90 days? We broke down their complete playbook in our new case study 📊 Read here: http://hub.brand.com/case-study",
+                    'threads' => "10M impressions in 90 days with 0 ad spend increase. The GlobalFin case study is now available for marketing teams."
                 ]),
                 'hashtags' => json_encode(['#CaseStudy', '#GrowthMarketing', '#EnterpriseStrategy', '#SocialMediaROI', '#Leadership']),
                 'status' => 'ready',
+                'scheduled_for' => $nextWeek,
                 'media' => [
                     [
                         'file_name' => 'case-study-portrait.png',
@@ -277,7 +295,7 @@ class Database {
             ]
         ];
 
-        $stmtPost = $db->prepare("INSERT INTO content_posts (campaign_id, title, primary_caption, channel_captions, hashtags, status) VALUES (?, ?, ?, ?, ?, ?)");
+        $stmtPost = $db->prepare("INSERT INTO content_posts (campaign_id, title, primary_caption, channel_captions, hashtags, status, scheduled_for) VALUES (?, ?, ?, ?, ?, ?, ?)");
         $stmtMedia = $db->prepare("INSERT INTO media_assets (post_id, file_name, original_name, mime_type, file_size, file_path, width, height, aspect_ratio, file_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
         foreach ($posts as $post) {
@@ -287,7 +305,8 @@ class Database {
                 $post['primary_caption'],
                 $post['channel_captions'],
                 $post['hashtags'],
-                $post['status']
+                $post['status'],
+                $post['scheduled_for']
             ]);
             $postId = (int)$db->lastInsertId();
 

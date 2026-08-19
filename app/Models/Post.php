@@ -1,6 +1,6 @@
 <?php
 /**
- * Content Post Model
+ * Content Post Model with Enhanced Search & Publishing Schedule Filters
  */
 
 require_once __DIR__ . '/../../config/database.php';
@@ -17,7 +17,7 @@ class Post {
 
     public function getAll(array $filters = []): array {
         $sql = "
-            SELECT p.*, c.title as campaign_title 
+            SELECT p.*, c.title as campaign_title, c.color as campaign_color
             FROM content_posts p 
             LEFT JOIN campaigns c ON p.campaign_id = c.id 
             WHERE 1=1
@@ -34,15 +34,28 @@ class Post {
             $params[] = $filters['status'];
         }
 
+        // Schedule View Filters
+        if (!empty($filters['schedule_view'])) {
+            $view = $filters['schedule_view'];
+            if ($view === 'today') {
+                $sql .= " AND date(p.scheduled_for) = date('now', 'localtime')";
+            } elseif ($view === 'this_week') {
+                $sql .= " AND strftime('%Y-%W', p.scheduled_for) = strftime('%Y-%W', 'now', 'localtime')";
+            } elseif ($view === 'latest') {
+                $sql .= " AND (p.scheduled_for IS NULL OR p.scheduled_for >= datetime('now', '-7 days', 'localtime'))";
+            }
+        }
+
         if (!empty($filters['search'])) {
             $term = '%' . $filters['search'] . '%';
-            $sql .= " AND (p.title LIKE ? OR p.primary_caption LIKE ? OR p.hashtags LIKE ?)";
+            $sql .= " AND (p.title LIKE ? OR p.primary_caption LIKE ? OR p.channel_captions LIKE ? OR p.hashtags LIKE ?)";
+            $params[] = $term;
             $params[] = $term;
             $params[] = $term;
             $params[] = $term;
         }
 
-        $sql .= " ORDER BY p.created_at DESC";
+        $sql .= " ORDER BY CASE WHEN p.scheduled_for IS NOT NULL THEN p.scheduled_for ELSE p.created_at END DESC";
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
@@ -59,7 +72,7 @@ class Post {
 
     public function getById(int $id): ?array {
         $stmt = $this->db->prepare("
-            SELECT p.*, c.title as campaign_title 
+            SELECT p.*, c.title as campaign_title, c.color as campaign_color
             FROM content_posts p 
             LEFT JOIN campaigns c ON p.campaign_id = c.id 
             WHERE p.id = ?
@@ -92,6 +105,8 @@ class Post {
             ? json_encode(array_values(array_filter($data['hashtags'])), JSON_UNESCAPED_UNICODE) 
             : json_encode([]);
 
+        $scheduledFor = !empty($data['scheduled_for']) ? $data['scheduled_for'] : null;
+
         $stmt->execute([
             $campId,
             $data['title'],
@@ -99,7 +114,7 @@ class Post {
             $channelCaptions,
             $hashtags,
             $data['status'] ?? 'ready',
-            $data['scheduled_for'] ?? null
+            $scheduledFor
         ]);
 
         return (int)$this->db->lastInsertId();
@@ -122,6 +137,8 @@ class Post {
             ? json_encode(array_values(array_filter($data['hashtags'])), JSON_UNESCAPED_UNICODE) 
             : json_encode([]);
 
+        $scheduledFor = !empty($data['scheduled_for']) ? $data['scheduled_for'] : null;
+
         return $stmt->execute([
             $campId,
             $data['title'],
@@ -129,7 +146,7 @@ class Post {
             $channelCaptions,
             $hashtags,
             $data['status'] ?? 'ready',
-            $data['scheduled_for'] ?? null,
+            $scheduledFor,
             $id
         ]);
     }

@@ -42,15 +42,26 @@ class Campaign {
 
     public function create(array $data): int {
         $stmt = $this->db->prepare("
-            INSERT INTO campaigns (title, description, status, tags)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO campaigns (title, description, status, tags, color)
+            VALUES (?, ?, ?, ?, ?)
         ");
-        $tagsJson = is_array($data['tags'] ?? null) ? json_encode($data['tags']) : json_encode([]);
+        $tags = $data['tags'] ?? [];
+        if (is_string($tags)) {
+            $decoded = json_decode($tags, true);
+            if (is_array($decoded)) {
+                $tags = $decoded;
+            } else {
+                $tags = array_filter(array_map('trim', explode(',', $tags)));
+            }
+        }
+        $tagsJson = json_encode(array_values((array)$tags), JSON_UNESCAPED_UNICODE);
+
         $stmt->execute([
             $data['title'],
             $data['description'] ?? '',
             $data['status'] ?? 'active',
-            $tagsJson
+            $tagsJson,
+            $data['color'] ?? '#6366f1'
         ]);
         return (int)$this->db->lastInsertId();
     }
@@ -58,15 +69,26 @@ class Campaign {
     public function update(int $id, array $data): bool {
         $stmt = $this->db->prepare("
             UPDATE campaigns 
-            SET title = ?, description = ?, status = ?, tags = ?, updated_at = CURRENT_TIMESTAMP
+            SET title = ?, description = ?, status = ?, tags = ?, color = ?, updated_at = CURRENT_TIMESTAMP
             WHERE id = ?
         ");
-        $tagsJson = is_array($data['tags'] ?? null) ? json_encode($data['tags']) : json_encode([]);
+        $tags = $data['tags'] ?? [];
+        if (is_string($tags)) {
+            $decoded = json_decode($tags, true);
+            if (is_array($decoded)) {
+                $tags = $decoded;
+            } else {
+                $tags = array_filter(array_map('trim', explode(',', $tags)));
+            }
+        }
+        $tagsJson = json_encode(array_values((array)$tags), JSON_UNESCAPED_UNICODE);
+
         return $stmt->execute([
             $data['title'],
             $data['description'] ?? '',
             $data['status'] ?? 'active',
             $tagsJson,
+            $data['color'] ?? '#6366f1',
             $id
         ]);
     }
