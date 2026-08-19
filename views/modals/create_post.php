@@ -1,3 +1,6 @@
+<?php
+$campaignList = $campaigns ?? [];
+?>
 <!-- Add / Edit Post Modal (Viewport Budgeted 2-Column Responsive Form with Comprehensive Formatter Deck) -->
 <div id="create-post-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/85 backdrop-blur-md p-4 overflow-hidden">
     <div class="relative w-full max-w-6xl h-[95vh] bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
@@ -35,9 +38,11 @@
                         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Campaign Bucket</label>
                         <select id="post-campaign" name="campaign_id" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-brand-500">
                             <option value="">-- No Campaign (Standalone) --</option>
-                            <?php foreach ($campaigns as $camp): ?>
-                                <option value="<?= $camp['id'] ?>"><?= htmlspecialchars($camp['title']) ?></option>
-                            <?php endforeach; ?>
+                            <?php if (!empty($campaignList)): ?>
+                                <?php foreach ($campaignList as $camp): ?>
+                                    <option value="<?= $camp['id'] ?>"><?= htmlspecialchars($camp['title']) ?></option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
                         </select>
                     </div>
                 </div>
